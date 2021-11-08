@@ -541,6 +541,8 @@ int sev_platform_init(int *error);
  */
 int sev_platform_status(struct sev_user_data_status *status, int *error);
 
+int sev_do_get_report(void __user *report, struct kvm_sev_attestation_report *input, struct file *filep, u32 handle, u32 *error);
+
 /**
  * sev_issue_cmd_external_user - issue SEV command by other driver with a file
  * handle.
@@ -648,6 +650,9 @@ static inline int
 sev_issue_cmd_external_user(struct file *filep, unsigned int id, void *data, int *error) { return -ENODEV; }
 
 static inline void *psp_copy_user_blob(u64 __user uaddr, u32 len) { return ERR_PTR(-EINVAL); }
+
+static inline int
+sev_do_get_report(void __user *report, struct kvm_sev_attestation_report *input, struct file *filep, u32 handle, u32 *error) { return -ENODEV; }
 
 #endif	/* CONFIG_CRYPTO_DEV_SP_PSP */
 

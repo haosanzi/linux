@@ -22,6 +22,7 @@
 #include <linux/firmware.h>
 #include <linux/gfp.h>
 #include <linux/cpufeature.h>
+#include <linux/kvm.h>
 
 #include <asm/smp.h>
 
@@ -383,6 +384,60 @@ static int sev_ioctl_do_platform_status(struct sev_issue_cmd *argp)
 
 	return ret;
 }
+
+int sev_do_get_report(void __user *report, struct kvm_sev_attestation_report *input, struct file *filep, u32 handle, u32 *error)
+{
+	struct sev_data_attestation_report data;
+	void __user *p;
+	void *blob = NULL;
+	int ret;
+
+	memset(&data, 0, sizeof(data));
+
+	/* User wants to query the blob length */
+	if (!input->len)
+		goto cmd;
+
+	p = (void __user *)(uintptr_t)input->uaddr;
+	if (p) {
+		if (input->len > SEV_FW_BLOB_MAX_SIZE)
+		return -EINVAL;
+
+		blob = kmalloc(input->len, GFP_KERNEL_ACCOUNT);
+		if (!blob)
+			return -ENOMEM;
+
+		data.address = __psp_pa(blob);
+		data.len = input->len;
+		memcpy(data.mnonce, input->mnonce, sizeof(input->mnonce));
+	}
+cmd:
+	data.handle = handle;
+	ret = sev_issue_cmd_external_user(filep, SEV_CMD_ATTESTATION_REPORT, &data, error);
+
+	/*
+	 * If we query the session length, FW responded with expected data.
+	 */
+	if (!input->len)
+		goto done;
+
+	if (ret)
+		goto e_free_blob;
+
+	if (blob) {
+		if (copy_to_user(p, blob, input->len))
+		ret = -EFAULT;
+	}
+
+done:
+	input->len = data.len;
+	if (copy_to_user(report, input, sizeof(*input)))
+		ret = -EFAULT;
+e_free_blob:
+	kfree(blob);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(sev_do_get_report);
 
 static int sev_ioctl_do_pek_pdh_gen(int cmd, struct sev_issue_cmd *argp, bool writable)
 {
