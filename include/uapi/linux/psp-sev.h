@@ -28,6 +28,7 @@ enum {
 	SEV_PEK_CERT_IMPORT,
 	SEV_GET_ID,	/* This command is deprecated, use SEV_GET_ID2 */
 	SEV_GET_ID2,
+	SEV_GET_REPORT,
 
 	SEV_MAX,
 };
@@ -146,6 +147,22 @@ struct sev_user_data_get_id2 {
 	__u64 address;				/* In */
 	__u32 length;				/* In/Out */
 } __packed;
+
+/**
+ * struct sev_user_data_attestation_report - ATTESTATION command parameters
+ *
+ * @address: physical address containing the attestation report
+ * @mnonce: mnonce to compute HMAC
+ * @length: length of attestation report
+ * @handle: handle of the VM to process
+ */
+
+struct sev_user_data_attestation_report {
+       __u8 mnonce[16];                        /* In */
+       __u64 uaddr;                            /* In */
+       __u32 len;                              /* In/Out */
+       __u32 handle;                           /* In */
+};
 
 /**
  * struct sev_issue_cmd - SEV ioctl parameters

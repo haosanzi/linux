@@ -413,7 +413,10 @@ int sev_do_get_report(void __user *report, struct kvm_sev_attestation_report *in
 	}
 cmd:
 	data.handle = handle;
-	ret = sev_issue_cmd_external_user(filep, SEV_CMD_ATTESTATION_REPORT, &data, error);
+	if (!filep)
+		ret = __sev_do_cmd_locked(SEV_CMD_ATTESTATION_REPORT, &data, error);
+	else
+		ret = sev_issue_cmd_external_user(filep, SEV_CMD_ATTESTATION_REPORT, &data, error);
 
 	/*
 	 * If we query the session length, FW responded with expected data.
@@ -438,6 +441,17 @@ e_free_blob:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(sev_do_get_report);
+
+static int sev_ioctl_do_get_report(struct sev_issue_cmd *argp)
+{
+	void __user *report = (void __user *)(uintptr_t)argp->data;
+	struct sev_user_data_attestation_report input;
+
+	if (copy_from_user(&input, (void __user *)argp->data, sizeof(input)))
+		return -EFAULT;
+
+	return sev_do_get_report(report, (struct kvm_sev_attestation_report *)&input, NULL, input.handle, &argp->error);
+}
 
 static int sev_ioctl_do_pek_pdh_gen(int cmd, struct sev_issue_cmd *argp, bool writable)
 {
@@ -924,6 +938,9 @@ static long sev_ioctl(struct file *file, unsigned int ioctl, unsigned long arg)
 		break;
 	case SEV_GET_ID2:
 		ret = sev_ioctl_do_get_id2(&input);
+		break;
+	case SEV_GET_REPORT:
+		ret = sev_ioctl_do_get_report(&input);
 		break;
 	default:
 		ret = -EINVAL;
