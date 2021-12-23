@@ -8906,7 +8906,7 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 		a3 &= 0xFFFFFFFF;
 	}
 
-	if (static_call(kvm_x86_get_cpl)(vcpu) != 0) {
+	if (static_call(kvm_x86_get_cpl)(vcpu) != 0 && nr != KVM_HC_VM_HANDLE) {
 		ret = -KVM_EPERM;
 		goto out;
 	}
@@ -8965,6 +8965,11 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 		vcpu->arch.complete_userspace_io = complete_hypercall_exit;
 		return 0;
 	}
+	case KVM_HC_VM_HANDLE:
+		ret = -KVM_ENOSYS;
+		if (kvm_x86_ops.vm_handle)
+			ret = kvm_x86_ops.vm_handle(vcpu->kvm);
+		break;
 	default:
 		ret = -KVM_ENOSYS;
 		break;

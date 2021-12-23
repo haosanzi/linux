@@ -4576,6 +4576,16 @@ static int svm_vm_init(struct kvm *kvm)
 	return 0;
 }
 
+static int sev_vm_handle(struct kvm *kvm)
+{
+	struct kvm_sev_info *sev = &to_kvm_svm(kvm)->sev_info;
+
+	if (!sev_guest(kvm))
+		return -ENOTTY;
+
+	return sev->handle;
+}
+
 static struct kvm_x86_ops svm_x86_ops __initdata = {
 	.name = "kvm_amd",
 
@@ -4705,6 +4715,7 @@ static struct kvm_x86_ops svm_x86_ops __initdata = {
 	.complete_emulated_msr = svm_complete_emulated_msr,
 
 	.vcpu_deliver_sipi_vector = svm_vcpu_deliver_sipi_vector,
+	.vm_handle = sev_vm_handle,
 };
 
 static struct kvm_x86_init_ops svm_init_ops __initdata = {
